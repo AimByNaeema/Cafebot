@@ -1,0 +1,37 @@
+[
+  {
+    "id": "morning-rush-20",
+    "name": "Morning Rush 20% Off",
+    "rule": "20% off the price of any coffee or espresso drink.",
+    "discount": { "type": "percent", "value": 20 },
+    "eligibility": [
+      "Valid 7:00am-9:00am only",
+      "Applies to items in the coffee category",
+      "One discount per drink, dine-in or to-go"
+    ],
+    "active": true
+  },
+  {
+    "id": "pastry-combo",
+    "name": "Pastry + Coffee Combo",
+    "rule": "Get a free blueberry muffin with the purchase of any large coffee.",
+    "discount": { "type": "free-item", "item": "blueberry-muffin" },
+    "eligibility": [
+      "Requires purchase of one large drip coffee",
+      "Limit one free muffin per order",
+      "No time restriction"
+    ],
+    "active": true
+  },
+  {
+    "id": "summer-cold-brew",
+    "name": "Summer Cold Brew Special",
+    "rule": "$1.00 off any cold brew.",
+    "discount": { "type": "amount-off", "value": 1.00 },
+    "eligibility": [
+      "Applies to cold-brew only",
+      "Seasonal promotion, valid June-August only"
+    ],
+    "active": false
+  }
+]

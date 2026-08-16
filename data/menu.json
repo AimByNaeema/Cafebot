@@ -1,0 +1,182 @@
+[
+  {
+    "id": "drip-coffee",
+    "name": "Drip Coffee",
+    "category": "coffee",
+    "description": "Classic brewed coffee, fresh all day.",
+    "prices": { "small": 2.50, "medium": 3.00, "large": 3.50 },
+    "options": [
+      { "name": "milk", "choices": ["none", "whole", "oat", "almond", "soy"] }
+    ],
+    "allergens": [],
+    "dietary": ["vegan", "gluten-free", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "espresso",
+    "name": "Espresso",
+    "category": "coffee",
+    "description": "Rich, concentrated shot pulled to order.",
+    "prices": { "single": 2.75, "double": 3.50 },
+    "options": [],
+    "allergens": [],
+    "dietary": ["vegan", "gluten-free", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "latte",
+    "name": "Latte",
+    "category": "coffee",
+    "description": "Espresso with steamed milk and a thin layer of foam.",
+    "prices": { "regular": 4.25 },
+    "options": [
+      { "name": "milk", "choices": ["whole", "oat", "almond", "soy"] },
+      { "name": "syrup", "choices": ["none", "vanilla", "caramel", "hazelnut"] }
+    ],
+    "allergens": ["dairy"],
+    "dietary": ["vegetarian", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "cappuccino",
+    "name": "Cappuccino",
+    "category": "coffee",
+    "description": "Equal parts espresso, steamed milk, and foam.",
+    "prices": { "regular": 4.00 },
+    "options": [
+      { "name": "milk", "choices": ["whole", "oat", "almond", "soy"] }
+    ],
+    "allergens": ["dairy"],
+    "dietary": ["vegetarian", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "mocha",
+    "name": "Mocha",
+    "category": "coffee",
+    "description": "Espresso with steamed milk and chocolate sauce.",
+    "prices": { "regular": 4.75 },
+    "options": [
+      { "name": "milk", "choices": ["whole", "oat", "almond", "soy"] },
+      { "name": "whipped-cream", "choices": ["yes", "no"] }
+    ],
+    "allergens": ["dairy"],
+    "dietary": ["vegetarian", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "cold-brew",
+    "name": "Cold Brew",
+    "category": "coffee",
+    "description": "Slow-steeped for 18 hours, served over ice.",
+    "prices": { "regular": 4.00 },
+    "options": [
+      { "name": "milk", "choices": ["none", "whole", "oat", "almond", "soy"] }
+    ],
+    "allergens": [],
+    "dietary": ["vegan", "gluten-free", "contains-caffeine"],
+    "available": false
+  },
+  {
+    "id": "black-tea",
+    "name": "Black Tea",
+    "category": "tea",
+    "description": "Bold, full-bodied loose-leaf black tea.",
+    "prices": { "regular": 2.75 },
+    "options": [
+      { "name": "flavor", "choices": ["classic", "earl-grey", "english-breakfast"] }
+    ],
+    "allergens": [],
+    "dietary": ["vegan", "gluten-free", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "herbal-tea",
+    "name": "Herbal Tea",
+    "category": "tea",
+    "description": "Naturally caffeine-free infusion.",
+    "prices": { "regular": 2.75 },
+    "options": [
+      { "name": "flavor", "choices": ["chamomile", "peppermint", "hibiscus"] }
+    ],
+    "allergens": [],
+    "dietary": ["vegan", "gluten-free"],
+    "available": true
+  },
+  {
+    "id": "chai-latte",
+    "name": "Chai Latte",
+    "category": "tea",
+    "description": "Spiced black tea with steamed milk.",
+    "prices": { "regular": 4.25 },
+    "options": [
+      { "name": "milk", "choices": ["whole", "oat", "almond", "soy"] }
+    ],
+    "allergens": ["dairy"],
+    "dietary": ["vegetarian", "contains-caffeine"],
+    "available": true
+  },
+  {
+    "id": "croissant",
+    "name": "Croissant",
+    "category": "food",
+    "description": "Buttery, flaky French pastry.",
+    "prices": { "plain": 3.25, "almond": 3.75 },
+    "options": [
+      { "name": "style", "choices": ["plain", "almond"] }
+    ],
+    "allergens": ["gluten", "dairy", "nuts"],
+    "dietary": ["vegetarian"],
+    "available": true
+  },
+  {
+    "id": "blueberry-muffin",
+    "name": "Blueberry Muffin",
+    "category": "food",
+    "description": "Moist muffin loaded with blueberries.",
+    "prices": { "regular": 3.50 },
+    "options": [],
+    "allergens": ["gluten", "dairy", "egg"],
+    "dietary": ["vegetarian"],
+    "available": true
+  },
+  {
+    "id": "bagel-cream-cheese",
+    "name": "Bagel with Cream Cheese",
+    "category": "food",
+    "description": "Toasted bagel with a generous spread of cream cheese.",
+    "prices": { "regular": 3.75 },
+    "options": [
+      { "name": "bagel-type", "choices": ["plain", "everything", "sesame"] }
+    ],
+    "allergens": ["gluten", "dairy"],
+    "dietary": ["vegetarian"],
+    "available": true
+  },
+  {
+    "id": "avocado-toast",
+    "name": "Avocado Toast",
+    "category": "food",
+    "description": "Smashed avocado on toasted sourdough with a squeeze of lemon.",
+    "prices": { "regular": 6.50 },
+    "options": [
+      { "name": "add-on", "choices": ["none", "chili-flakes", "everything-seasoning"] }
+    ],
+    "allergens": ["gluten"],
+    "dietary": ["vegan"],
+    "available": true
+  },
+  {
+    "id": "breakfast-sandwich",
+    "name": "Breakfast Sandwich",
+    "category": "food",
+    "description": "Egg and cheese on a toasted English muffin, choice of protein.",
+    "prices": { "regular": 5.95 },
+    "options": [
+      { "name": "protein", "choices": ["bacon", "sausage", "veggie"] }
+    ],
+    "allergens": ["gluten", "dairy", "egg"],
+    "dietary": ["vegetarian"],
+    "available": true
+  }
+]

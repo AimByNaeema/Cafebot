@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CafeBot — Staff</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="staff.css">
+</head>
+<body>
+<div class="staff-app">
+  <header class="staff-header">
+    <div class="brand">
+      <span class="brand-icon">☕</span>
+      <div class="brand-text">
+        <h1>CafeBot — Staff</h1>
+        <span class="status"><span class="status-dot"></span>Orders</span>
+      </div>
+    </div>
+    <button type="button" id="refreshBtn" class="refresh-btn">Refresh</button>
+  </header>
+
+  <main class="orders-area" id="ordersArea">
+    <p class="empty-state" id="emptyState" hidden>No orders yet.</p>
+  </main>
+</div>
+
+<template id="orderCardTemplate">
+  <article class="order-card">
+    <div class="order-card-top">
+      <div>
+        <span class="order-id"></span>
+        <span class="order-time"></span>
+      </div>
+      <span class="fulfillment-badge"></span>
+    </div>
+    <div class="order-customer"></div>
+    <ul class="order-items"></ul>
+    <div class="order-bottom">
+      <span class="order-total"></span>
+      <div class="order-status-controls">
+        <span class="status-badge"></span>
+        <select class="status-select" aria-label="Update order status"></select>
+      </div>
+    </div>
+    <p class="order-error" hidden></p>
+  </article>
+</template>
+
+<script src="staff.js"></script>
+</body>
+</html>
