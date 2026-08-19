@@ -1,7 +1,8 @@
-// Floating CafeBot chat widget — mock UI only. No API calls; the reply is a
-// fixed canned message.
+// Floating CafeBot chat widget — sends messages to the real /api/chat endpoint.
 
-const MOCK_REPLY = "Hi! I'm CafeBot. My AI brain isn't connected yet.";
+const FALLBACK_REPLY = "Sorry, I'm having trouble connecting right now — please try again in a moment.";
+const MAX_HISTORY_MESSAGES = 20;
+const conversationHistory = [];
 
 const toggleBtn = document.getElementById('chatWidgetToggle');
 const panel = document.getElementById('chatWidgetPanel');
@@ -85,7 +86,7 @@ function togglePanel() {
   }
 }
 
-function handleSend(event) {
+async function handleSend(event) {
   event.preventDefault();
   const text = input.value.trim();
   if (!text) return;
@@ -97,11 +98,29 @@ function handleSend(event) {
   sendBtn.disabled = true;
   showTyping();
 
-  setTimeout(() => {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        conversationHistory: conversationHistory.slice(-MAX_HISTORY_MESSAGES),
+      }),
+    });
+    const data = await response.json();
+    const reply = typeof data.reply === 'string' ? data.reply : FALLBACK_REPLY;
+
     hideTyping();
-    appendMessage('bot', MOCK_REPLY);
+    appendMessage('bot', reply);
+    conversationHistory.push({ role: 'user', content: text });
+    conversationHistory.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    console.error('CafeBot chat request failed:', err.message);
+    hideTyping();
+    appendMessage('bot', FALLBACK_REPLY);
+  } finally {
     sendBtn.disabled = false;
-  }, 700);
+  }
 }
 
 toggleBtn.addEventListener('click', togglePanel);

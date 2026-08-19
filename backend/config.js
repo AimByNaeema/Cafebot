@@ -13,4 +13,8 @@ function getDeliveryFee() {
   return parseNonNegativeNumber(process.env.DELIVERY_FEE, 0);
 }
 
-module.exports = { getTaxRate, getDeliveryFee };
+function getClaudeModel() {
+  return process.env.CLAUDE_MODEL || 'claude-sonnet-5';
+}
+
+module.exports = { getTaxRate, getDeliveryFee, getClaudeModel };
