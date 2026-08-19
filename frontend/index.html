@@ -3,40 +3,264 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CafeBot</title>
+<title>CafeBot Café</title>
+<meta name="description" content="CafeBot Café — handcrafted coffee, tea, and fresh food. See our menu, hours, and location.">
+<meta name="theme-color" content="#6f4e37">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%98%95%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="chat-widget.css">
 </head>
 <body>
-<div class="app">
-  <header class="chat-header">
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="site-header">
+  <div class="site-header-inner">
     <div class="brand">
-      <span class="brand-icon">☕</span>
+      <span class="brand-icon" aria-hidden="true">☕</span>
       <div class="brand-text">
-        <h1>CafeBot</h1>
-        <span class="status"><span class="status-dot"></span>Online</span>
+        <h1 class="brand-name">CafeBot Café</h1>
+        <span class="status"><span class="status-dot"></span>Open Now</span>
       </div>
     </div>
-  </header>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="#hero">Home</a>
+      <a href="#about">About</a>
+      <a href="#menu">Menu</a>
+      <a href="#hours">Hours &amp; Location</a>
+    </nav>
+  </div>
+</header>
 
-  <main class="chat-area" id="chatArea" aria-live="polite"></main>
+<main id="main-content">
 
-  <form class="input-bar" id="inputForm">
+  <section id="hero" class="hero">
+    <div class="hero-inner">
+      <h2 class="hero-headline">Handcrafted coffee, warm welcomes.</h2>
+      <p class="hero-subtext">Fresh-brewed coffee, tea, and food made every morning, right in the neighborhood.</p>
+      <div class="hero-actions">
+        <a href="#menu" class="btn btn-primary">View Menu</a>
+        <a href="#hours" class="btn btn-secondary">Visit Us</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="about">
+    <div class="about-inner">
+      <div class="about-art" aria-hidden="true">☕</div>
+      <div class="about-content">
+        <h2>About CafeBot Café</h2>
+        <p>We're a neighborhood café serving carefully brewed coffee, loose-leaf tea, and fresh food daily. Every drink is made to order, every pastry is baked fresh, and every visit starts with a friendly hello.</p>
+        <p>Stop in, grab a seat, and let us take care of the rest.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="menu" class="menu">
+    <div class="menu-inner">
+      <h2>Our Menu</h2>
+      <p class="menu-intro">A few of the placeholders below are swapped out seasonally — ask a barista what's fresh today.</p>
+
+      <h3 class="menu-category-title">Coffee &amp; Espresso</h3>
+      <div class="menu-grid">
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Drip Coffee</h4>
+            <span class="menu-price">Small $2.50 / Medium $3.00 / Large $3.50</span>
+          </div>
+          <p>Classic brewed coffee, fresh all day.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Espresso</h4>
+            <span class="menu-price">Single $2.75 / Double $3.50</span>
+          </div>
+          <p>Rich, concentrated shot pulled to order.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Latte</h4>
+            <span class="menu-price">$4.25</span>
+          </div>
+          <p>Espresso with steamed milk and a thin layer of foam.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Cappuccino</h4>
+            <span class="menu-price">$4.00</span>
+          </div>
+          <p>Equal parts espresso, steamed milk, and foam.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Mocha</h4>
+            <span class="menu-price">$4.75</span>
+          </div>
+          <p>Espresso with steamed milk and chocolate sauce.</p>
+        </article>
+        <article class="menu-card menu-card-unavailable">
+          <div class="menu-card-top">
+            <h4>Cold Brew</h4>
+            <span class="menu-price">$4.00</span>
+          </div>
+          <p>Slow-steeped for 18 hours, served over ice.</p>
+          <span class="menu-unavailable-badge">Currently unavailable</span>
+        </article>
+      </div>
+
+      <h3 class="menu-category-title">Tea</h3>
+      <div class="menu-grid">
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Black Tea</h4>
+            <span class="menu-price">$2.75</span>
+          </div>
+          <p>Bold, full-bodied loose-leaf black tea.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Herbal Tea</h4>
+            <span class="menu-price">$2.75</span>
+          </div>
+          <p>Naturally caffeine-free infusion.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Chai Latte</h4>
+            <span class="menu-price">$4.25</span>
+          </div>
+          <p>Spiced black tea with steamed milk.</p>
+        </article>
+      </div>
+
+      <h3 class="menu-category-title">Food</h3>
+      <div class="menu-grid">
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Croissant</h4>
+            <span class="menu-price">Plain $3.25 / Almond $3.75</span>
+          </div>
+          <p>Buttery, flaky French pastry.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Blueberry Muffin</h4>
+            <span class="menu-price">$3.50</span>
+          </div>
+          <p>Moist muffin loaded with blueberries.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Bagel with Cream Cheese</h4>
+            <span class="menu-price">$3.75</span>
+          </div>
+          <p>Toasted bagel with a generous spread of cream cheese.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Avocado Toast</h4>
+            <span class="menu-price">$6.50</span>
+          </div>
+          <p>Smashed avocado on toasted sourdough with a squeeze of lemon.</p>
+        </article>
+        <article class="menu-card">
+          <div class="menu-card-top">
+            <h4>Breakfast Sandwich</h4>
+            <span class="menu-price">$5.95</span>
+          </div>
+          <p>Egg and cheese on a toasted English muffin, choice of protein.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="hours" class="hours">
+    <div class="hours-inner">
+      <div class="hours-block">
+        <h2>Hours</h2>
+        <!-- Placeholder hours — update before deploying -->
+        <ul class="hours-list">
+          <li><span>Monday – Friday</span><span>6:30 AM – 6:00 PM</span></li>
+          <li><span>Saturday</span><span>7:00 AM – 6:00 PM</span></li>
+          <li><span>Sunday</span><span>7:00 AM – 4:00 PM</span></li>
+        </ul>
+      </div>
+      <div class="hours-block">
+        <h2>Location</h2>
+        <!-- Placeholder address/contact — update before deploying -->
+        <address class="location-details">
+          123 Main Street<br>
+          Your City, ST 00000<br>
+          <a href="tel:+15551234567">(555) 123-4567</a><br>
+          <a href="mailto:hello@cafebot.example">hello@cafebot.example</a>
+        </address>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">☕</span>
+      <div class="brand-text">
+        <p class="brand-name">CafeBot Café</p>
+      </div>
+    </div>
+    <nav class="footer-nav" aria-label="Footer navigation">
+      <a href="#hero">Home</a>
+      <a href="#about">About</a>
+      <a href="#menu">Menu</a>
+      <a href="#hours">Hours &amp; Location</a>
+    </nav>
+    <p class="footer-copy">© 2026 CafeBot Café. All rights reserved.</p>
+  </div>
+</footer>
+
+<button
+  type="button"
+  id="chatWidgetToggle"
+  class="chat-widget-toggle"
+  aria-expanded="false"
+  aria-controls="chatWidgetPanel"
+  aria-label="Open chat with CafeBot"
+>
+  <span aria-hidden="true">💬</span>
+</button>
+
+<div id="chatWidgetPanel" class="chat-widget-panel" aria-hidden="true">
+  <div class="chat-widget-header">
+    <div class="chat-widget-header-brand">
+      <span aria-hidden="true">☕</span>
+      <span>CafeBot</span>
+    </div>
+    <button type="button" id="chatWidgetClose" class="chat-widget-close" aria-label="Close chat">✕</button>
+  </div>
+
+  <div id="chatWidgetMessages" class="chat-widget-messages" role="log" aria-live="polite"></div>
+
+  <form id="chatWidgetForm" class="chat-widget-form">
     <input
       type="text"
-      id="messageInput"
-      class="message-input"
+      id="chatWidgetInput"
+      class="chat-widget-input"
       placeholder="Type a message..."
       autocomplete="off"
       aria-label="Type a message"
     >
-    <button type="submit" class="send-btn" id="sendBtn" aria-label="Send message">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <button type="submit" id="chatWidgetSend" class="chat-widget-send" aria-label="Send message">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M3 11.5L21 3L13 21L11 13L3 11.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       </svg>
     </button>
   </form>
 </div>
 
-<script src="app.js"></script>
+<script src="chat-widget.js"></script>
+
 </body>
 </html>
