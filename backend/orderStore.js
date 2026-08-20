@@ -1,9 +1,16 @@
+/*
+ * This module persists orders to a local JSON file (data/orders.json). That's fine for
+ * local development and demos, but it is NOT a real database and won't survive production
+ * on Vercel: serverless functions run on ephemeral instances with a read-only (or
+ * non-shared, non-durable) filesystem, so writes here can silently vanish between
+ * invocations. Replace this with a real persistence layer before deploying to Vercel.
+ */
+
 const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { getOrderTotals, resetOrder } = require('./order');
 
-// data/orders.json is temporary, file-based dev storage, not a database — revisit before production.
 const DEFAULT_ORDERS_FILE = path.join(__dirname, '..', 'data', 'orders.json');
 
 const ORDER_STATUSES = ['NEW', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'];

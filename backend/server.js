@@ -6,7 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
 const { readOrders, updateOrderStatus, confirmOrder, ORDER_STATUSES } = require('./orderStore');
-const { getCurrentOrder, addItemToOrder, modifyOrderItem, removeOrderItem, getOrderTotals, setOrderType, setCustomerDetails, setPickupTime, setDeliveryAddress, markSummaryShown, getOrderState } = require('./order');
+const { getCurrentOrder, addItemToOrder, modifyOrderItem, removeOrderItem, getOrderTotals, setOrderType, setCustomerDetails, setPickupTime, setDeliveryAddress, markSummaryShown, markAddressConfirmed, getOrderState } = require('./order');
 const { getRecommendations } = require('./recommendations');
 const { getClaudeModel } = require('./config');
 const menu = require('../data/menu.json');
@@ -82,7 +82,7 @@ const TOOLS = [
   },
   {
     name: 'setOrderDetails',
-    description: "Record the customer's order type (pickup or delivery) along with whatever details that type requires — call this as you collect each piece, passing only what you just confirmed (anything omitted keeps its current value; call it multiple times as info comes in). Pickup only needs a confirmed name (pickup time is optional). Delivery needs a confirmed name, phone number, and full delivery address; apartment/unit and delivery instructions are optional — ask for them, but don't invent a value or leave a required field blank. The response's `missing` field lists exactly which required fields are still unset for the order type currently selected — only ask the customer for those, never re-ask for something already confirmed, and never guess or invent any of these details yourself.",
+    description: "Record the customer's order type (pickup or delivery) along with whatever details that type requires — call this as you collect each piece, passing only what you just confirmed (anything omitted keeps its current value; call it multiple times as info comes in). Pickup only needs a confirmed name (pickup time is optional). Delivery needs a confirmed name, phone number, and full delivery address; apartment/unit and delivery instructions are optional — ask for them, but don't invent a value or leave a required field blank. For delivery orders, calling this with any address field (deliveryAddress, aptUnit, or deliveryInstructions) clears any prior address confirmation — you must call `confirmDeliveryAddress` again afterward. The response's `missing` field lists exactly which required fields are still unset for the order type currently selected, including `addressConfirmed` for delivery orders until it's been confirmed — only ask the customer for those, never re-ask for something already confirmed, and never guess or invent any of these details yourself.",
     input_schema: {
       type: 'object',
       properties: {
@@ -95,6 +95,11 @@ const TOOLS = [
         deliveryInstructions: { type: 'string', description: 'Delivery only. Any delivery instructions (gate code, "leave at door", etc.). Omit if none given.' },
       },
     },
+  },
+  {
+    name: 'confirmDeliveryAddress',
+    description: "Mark the current delivery address as confirmed by the customer. Only call this after reading the full captured address back to them verbatim — street address, apartment/unit if given, and delivery instructions if given — and receiving their explicit confirmation that it's correct. Delivery orders cannot be placed until this has been called. If the customer corrects any part of the address afterward via setOrderDetails, the confirmation is cleared automatically — read the corrected address back and call this again.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'applyPromotion',
@@ -113,7 +118,7 @@ const TOOLS = [
   },
   {
     name: 'placeOrder',
-    description: "Finalize and save the order. This is the only tool that actually places it, and it refuses unless every requirement is met: the customer must have already been shown the full checkout summary (call getCheckoutSummary first), all required order-type details must be set (name; plus phone and delivery address for delivery), and customerConfirmed must be true. Only ever pass customerConfirmed: true after the customer gives a clear, unambiguous affirmative to a direct question like \"Shall I place this order?\" — a vague, hedging, or unclear reply (e.g. \"maybe\", \"I think so\", not really answering, changing the subject) is NOT confirmation; if there's any doubt, ask again instead of calling this. If the call fails, it tells you exactly why (summary not yet shown, which order details are still missing, or not yet confirmed) — resolve that with the customer and try again, never guess or force it through.",
+    description: "Finalize and save the order. This is the only tool that actually places it, and it refuses unless every requirement is met: the customer must have already been shown the full checkout summary (call getCheckoutSummary first), all required order-type details must be set (name; plus phone, delivery address, and a confirmed address via confirmDeliveryAddress for delivery), and customerConfirmed must be true. Only ever pass customerConfirmed: true after the customer gives a clear, unambiguous affirmative to a direct question like \"Shall I place this order?\" — a vague, hedging, or unclear reply (e.g. \"maybe\", \"I think so\", not really answering, changing the subject) is NOT confirmation; if there's any doubt, ask again instead of calling this. If the call fails, it tells you exactly why (summary not yet shown, which order details are still missing — including an unconfirmed delivery address, or not yet confirmed) — resolve that with the customer and try again, never guess or force it through.",
     input_schema: {
       type: 'object',
       properties: {
@@ -164,6 +169,7 @@ function getMissingOrderDetails(state) {
     if (state.orderType === 'delivery') {
       if (!state.customer.phone) missing.push('phone');
       if (!state.deliveryAddress.address) missing.push('deliveryAddress');
+      if (!state.addressConfirmed) missing.push('addressConfirmed');
     }
   }
   return missing;
@@ -195,6 +201,12 @@ function setOrderDetails(input) {
     deliveryInstructions: state.deliveryAddress.instructions,
     missing,
   };
+}
+
+function confirmDeliveryAddress() {
+  markAddressConfirmed();
+  const state = getOrderState();
+  return { deliveryAddress: state.deliveryAddress.address, aptUnit: state.deliveryAddress.aptUnit, deliveryInstructions: state.deliveryAddress.instructions, addressConfirmed: state.addressConfirmed };
 }
 
 function applyPromotion() {
@@ -286,6 +298,9 @@ function runTool(name, input) {
   }
   if (name === 'setOrderDetails') {
     return setOrderDetails(input);
+  }
+  if (name === 'confirmDeliveryAddress') {
+    return confirmDeliveryAddress();
   }
   if (name === 'getOrderTotal') {
     return getOrderTotal();

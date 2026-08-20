@@ -9,6 +9,7 @@ let orderType = null;
 let customer = { name: null, phone: null };
 let pickupTime = null;
 let deliveryAddress = { address: null, aptUnit: null, instructions: null };
+let addressConfirmed = false;
 let summaryShown = false;
 let confirmed = false;
 let status = 'building';
@@ -37,6 +38,7 @@ function resetOrder() {
   customer = { name: null, phone: null };
   pickupTime = null;
   deliveryAddress = { address: null, aptUnit: null, instructions: null };
+  addressConfirmed = false;
   summaryShown = false;
   confirmed = false;
   status = 'building';
@@ -75,12 +77,18 @@ function setDeliveryAddress({ address, aptUnit, instructions } = {}) {
   if (instructions !== undefined) {
     deliveryAddress.instructions = instructions?.trim() || null;
   }
+  addressConfirmed = false;
   return { ok: true, deliveryAddress };
 }
 
 function markSummaryShown() {
   summaryShown = true;
   return { ok: true, summaryShown };
+}
+
+function markAddressConfirmed() {
+  addressConfirmed = true;
+  return { ok: true, addressConfirmed };
 }
 
 function setConfirmed(value) {
@@ -98,7 +106,7 @@ function setStatus(newStatus) {
 
 function getOrderState() {
   const { items, discountTotal, total } = getOrderTotals();
-  return { items, orderType, customer, pickupTime, deliveryAddress, summaryShown, discount: discountTotal, total, confirmed, status };
+  return { items, orderType, customer, pickupTime, deliveryAddress, addressConfirmed, summaryShown, discount: discountTotal, total, confirmed, status };
 }
 
 function titleCase(value) {
@@ -293,6 +301,7 @@ module.exports = {
   setPickupTime,
   setDeliveryAddress,
   markSummaryShown,
+  markAddressConfirmed,
   setConfirmed,
   setStatus,
 };

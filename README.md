@@ -5,9 +5,9 @@ A chatbot-style ordering assistant for a cafe. The backend is a working Express 
 ## Status
 
 - Backend (`backend/server.js`): implemented — serves the frontend, exposes the orders API, and persists orders to `data/orders.json`.
-- Customer chat UI (`frontend/index.html`, `frontend/app.js`): UI only, currently uses mocked data (no live backend calls).
+- Customer chat UI (`frontend/index.html`, `frontend/chat-widget.js`): live — calls the real `/api/chat` endpoint. (`frontend/app.js` is an older, unused mock and is not loaded by `index.html`.)
 - Staff dashboard (`frontend/staff.html`, `frontend/staff.js`): live — calls the real `/api/orders` and `/api/orders/:id/status` endpoints.
-- `/api/chat`: placeholder — returns a canned response. It is not yet wired up to the Anthropic API, despite `ANTHROPIC_API_KEY`/`CLAUDE_MODEL` being present in `.env.example` for future use.
+- `/api/chat`: live — calls the real Anthropic Messages API with a full tool-calling loop (menu lookup, cart management, order details, promotions, deterministic totals, checkout summary, and a confirmation-gated `placeOrder`). Requires a real `ANTHROPIC_API_KEY` in `.env` to return real replies instead of a fallback error.
 
 ## Folder layout
 
@@ -38,8 +38,8 @@ Copy `.env.example` to `.env` in the project root and adjust as needed:
 | `TAX_RATE` | No (default `0`) | Sales tax rate as a decimal fraction, e.g. `0.08` |
 | `DELIVERY_FEE` | No (default `0`) | Flat delivery fee added to delivery orders, in dollars |
 | `ORDERS_FILE_PATH` | No (default `data/orders.json`) | Overrides where order records are read/written — useful on platforms with an ephemeral filesystem |
-| `ANTHROPIC_API_KEY` | Not yet used | Reserved for the future Claude-powered `/api/chat` integration |
-| `CLAUDE_MODEL` | Not yet used | Reserved for the future Claude-powered `/api/chat` integration |
+| `ANTHROPIC_API_KEY` | **Yes** | Real key for the Anthropic (Claude) API — `/api/chat` returns a generic fallback reply without it |
+| `CLAUDE_MODEL` | No (default `claude-sonnet-5`) | Claude model id used for chat responses |
 
 ## Tests
 

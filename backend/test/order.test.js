@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { addItemToOrder, getOrderTotals, getOrderSummary, resetOrder } = require('../order');
+const { addItemToOrder, getOrderTotals, getOrderSummary, resetOrder, setOrderType } = require('../order');
 const { roundToCents } = require('../money');
 
 function setEnv(taxRate, deliveryFee) {
@@ -56,6 +56,7 @@ test('tax is computed on the post-discount amount', () => {
 
 test('flat delivery fee is added once and is not taxed', () => {
   setEnv(0.1, 2.5);
+  setOrderType('delivery');
   addItemToOrder({ itemId: 'drip-coffee', options: { size: 'medium', milk: 'none' }, quantity: 2 });
   const { subtotal, tax, deliveryFee, total } = getOrderTotals();
 

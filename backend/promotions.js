@@ -40,6 +40,15 @@ const PREDICATES = {
       return null;
     }
     const freeItem = getMenuItem(promo.discount.item);
+    const freeItemLine = items.find((line) => line.itemId === promo.discount.item);
+    if (freeItemLine) {
+      return {
+        type: 'applied',
+        id: promo.id,
+        name: promo.name,
+        discountAmount: roundToCents(freeItemLine.unitPrice),
+      };
+    }
     return {
       type: 'recommended',
       id: promo.id,
