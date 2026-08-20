@@ -1,9 +1,17 @@
+const { randomUUID } = require('node:crypto');
 const { getMenuItem, getRequiredSelections, resolvePriceKey } = require('./menu');
 const { evaluatePromotions } = require('./promotions');
 const { roundToCents } = require('./money');
 const { getTaxRate, getDeliveryFee } = require('./config');
 
 let currentOrder = [];
+let orderType = null;
+let customer = { name: null };
+let confirmed = false;
+let status = 'building';
+
+const ORDER_TYPES = ['pickup', 'delivery'];
+const SESSION_STATUSES = ['building', 'confirmed', 'cancelled'];
 
 function getCurrentOrder() {
   const subtotal = currentOrder.reduce((sum, line) => sum + line.lineTotal, 0);
@@ -22,6 +30,41 @@ function getOrderTotals(options) {
 
 function resetOrder() {
   currentOrder = [];
+  orderType = null;
+  customer = { name: null };
+  confirmed = false;
+  status = 'building';
+}
+
+function setOrderType(type) {
+  if (!ORDER_TYPES.includes(type)) {
+    return { ok: false, reason: 'invalid_order_type' };
+  }
+  orderType = type;
+  return { ok: true, orderType };
+}
+
+function setCustomerDetails({ name } = {}) {
+  customer = { name: name?.trim() || null };
+  return { ok: true, customer };
+}
+
+function setConfirmed(value) {
+  confirmed = Boolean(value);
+  return { ok: true, confirmed };
+}
+
+function setStatus(newStatus) {
+  if (!SESSION_STATUSES.includes(newStatus)) {
+    return { ok: false, reason: 'invalid_status' };
+  }
+  status = newStatus;
+  return { ok: true, status };
+}
+
+function getOrderState() {
+  const { items, discountTotal, total } = getOrderTotals();
+  return { items, orderType, customer, discount: discountTotal, total, confirmed, status };
 }
 
 function titleCase(value) {
@@ -82,18 +125,7 @@ function getOrderSummary(options) {
   return summary;
 }
 
-function addItemToOrder({ itemId, options = {}, quantity = 1 }) {
-  const item = getMenuItem(itemId);
-  if (!item) {
-    return { ok: false, reason: 'not_found' };
-  }
-  if (!item.available) {
-    return { ok: false, reason: 'unavailable' };
-  }
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    return { ok: false, reason: 'invalid_quantity' };
-  }
-
+function validateSelections(item, options) {
   const requiredSelections = getRequiredSelections(item);
   const missing = [];
   const invalid = [];
@@ -107,6 +139,23 @@ function addItemToOrder({ itemId, options = {}, quantity = 1 }) {
     }
   }
 
+  return { missing, invalid };
+}
+
+function addItemToOrder({ itemId, options = {}, quantity = 1 }) {
+  const item = getMenuItem(itemId);
+  if (!item) {
+    return { ok: false, reason: 'not_found' };
+  }
+  if (!item.available) {
+    return { ok: false, reason: 'unavailable' };
+  }
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { ok: false, reason: 'invalid_quantity' };
+  }
+
+  const { missing, invalid } = validateSelections(item, options);
+
   if (missing.length > 0) {
     return { ok: false, reason: 'missing_options', item: { id: item.id, name: item.name }, missing };
   }
@@ -118,6 +167,7 @@ function addItemToOrder({ itemId, options = {}, quantity = 1 }) {
   const unitPrice = item.prices[priceKey];
 
   const addedItem = {
+    lineId: randomUUID(),
     itemId: item.id,
     name: item.name,
     quantity,
@@ -131,4 +181,81 @@ function addItemToOrder({ itemId, options = {}, quantity = 1 }) {
   return { ok: true, addedItem, order: getCurrentOrder() };
 }
 
-module.exports = { getCurrentOrder, addItemToOrder, resetOrder, getOrderSummary, getOrderTotals };
+function modifyOrderItem({ lineId, quantity, options }) {
+  const line = currentOrder.find((l) => l.lineId === lineId);
+  if (!line) {
+    return { ok: false, reason: 'not_found' };
+  }
+
+  const item = getMenuItem(line.itemId);
+  if (!item.available) {
+    return { ok: false, reason: 'unavailable' };
+  }
+
+  const nextQuantity = quantity === undefined ? line.quantity : quantity;
+  if (!Number.isInteger(nextQuantity) || nextQuantity < 1) {
+    return { ok: false, reason: 'invalid_quantity' };
+  }
+
+  const nextOptions = { ...line.options, ...(options || {}) };
+  const { missing, invalid } = validateSelections(item, nextOptions);
+
+  if (missing.length > 0) {
+    return { ok: false, reason: 'missing_options', item: { id: item.id, name: item.name }, missing };
+  }
+  if (invalid.length > 0) {
+    return { ok: false, reason: 'invalid_options', item: { id: item.id, name: item.name }, invalid };
+  }
+
+  const priceKey = resolvePriceKey(item, nextOptions);
+
+  line.quantity = nextQuantity;
+  line.options = nextOptions;
+  line.unitPrice = item.prices[priceKey];
+  line.lineTotal = roundToCents(line.unitPrice * nextQuantity);
+
+  return { ok: true, modifiedItem: line, order: getCurrentOrder() };
+}
+
+function removeOrderItem({ lineId, quantity }) {
+  const index = currentOrder.findIndex((l) => l.lineId === lineId);
+  if (index === -1) {
+    return { ok: false, reason: 'not_found' };
+  }
+
+  const line = currentOrder[index];
+
+  if (quantity === undefined) {
+    currentOrder.splice(index, 1);
+    return { ok: true, removed: true, removedItem: line, order: getCurrentOrder() };
+  }
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { ok: false, reason: 'invalid_quantity' };
+  }
+
+  if (quantity >= line.quantity) {
+    currentOrder.splice(index, 1);
+    return { ok: true, removed: true, removedItem: line, order: getCurrentOrder() };
+  }
+
+  line.quantity -= quantity;
+  line.lineTotal = roundToCents(line.unitPrice * line.quantity);
+
+  return { ok: true, removed: false, modifiedItem: line, order: getCurrentOrder() };
+}
+
+module.exports = {
+  getCurrentOrder,
+  addItemToOrder,
+  modifyOrderItem,
+  removeOrderItem,
+  resetOrder,
+  getOrderSummary,
+  getOrderTotals,
+  getOrderState,
+  setOrderType,
+  setCustomerDetails,
+  setConfirmed,
+  setStatus,
+};

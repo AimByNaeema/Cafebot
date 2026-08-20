@@ -3,6 +3,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { getOrderTotals, resetOrder } = require('./order');
 
+// data/orders.json is temporary, file-based dev storage, not a database — revisit before production.
 const DEFAULT_ORDERS_FILE = path.join(__dirname, '..', 'data', 'orders.json');
 
 const ORDER_STATUSES = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
