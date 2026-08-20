@@ -5,8 +5,8 @@ const path = require('node:path');
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-const { readOrders, updateOrderStatus, ORDER_STATUSES } = require('./orderStore');
-const { getCurrentOrder, addItemToOrder, modifyOrderItem, removeOrderItem, getOrderTotals } = require('./order');
+const { readOrders, updateOrderStatus, confirmOrder, ORDER_STATUSES } = require('./orderStore');
+const { getCurrentOrder, addItemToOrder, modifyOrderItem, removeOrderItem, getOrderTotals, setOrderType, setCustomerDetails, setPickupTime, setDeliveryAddress, markSummaryShown, getOrderState } = require('./order');
 const { getRecommendations } = require('./recommendations');
 const { getClaudeModel } = require('./config');
 const menu = require('../data/menu.json');
@@ -81,9 +81,46 @@ const TOOLS = [
     input_schema: { type: 'object', properties: {} },
   },
   {
+    name: 'setOrderDetails',
+    description: "Record the customer's order type (pickup or delivery) along with whatever details that type requires — call this as you collect each piece, passing only what you just confirmed (anything omitted keeps its current value; call it multiple times as info comes in). Pickup only needs a confirmed name (pickup time is optional). Delivery needs a confirmed name, phone number, and full delivery address; apartment/unit and delivery instructions are optional — ask for them, but don't invent a value or leave a required field blank. The response's `missing` field lists exactly which required fields are still unset for the order type currently selected — only ask the customer for those, never re-ask for something already confirmed, and never guess or invent any of these details yourself.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        orderType: { type: 'string', enum: ['pickup', 'delivery'], description: 'Set once the customer has confirmed whether this is pickup or delivery.' },
+        customerName: { type: 'string', description: "The customer's name, exactly as they gave it." },
+        pickupTime: { type: 'string', description: 'Pickup only. Preferred pickup time in the customer\'s own words, e.g. "3:30pm" or "in 20 minutes". Omit if no preference.' },
+        phone: { type: 'string', description: "Delivery only. The customer's phone number, exactly as they gave it." },
+        deliveryAddress: { type: 'string', description: 'Delivery only. The full delivery address (street, city, etc.), exactly as given.' },
+        aptUnit: { type: 'string', description: 'Delivery only. Apartment/unit/suite number, if applicable. Omit if there is none.' },
+        deliveryInstructions: { type: 'string', description: 'Delivery only. Any delivery instructions (gate code, "leave at door", etc.). Omit if none given.' },
+      },
+    },
+  },
+  {
     name: 'applyPromotion',
     description: "Check which active promotions (from data/promotions.json) currently qualify for the customer's order, based on real eligibility rules evaluated against the current cart and time — never based on anything the customer claims. Returns `appliedPromotions` (already reflected in the order's discount — relay the exact discountAmount for each, never estimate or invent it yourself) and `recommendedPromotions` (an eligible offer you may mention once — never repeat or re-offer one that's already been declined). There is no discount-code system: this tool takes no input, and if a customer mentions a promo code, tell them none is needed or recognized — never invent or accept one.",
     input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'getOrderTotal',
+    description: "Get the exact subtotal, applied promotion discount, tax, delivery fee, and total for the current order — computed by the backend from real menu prices and quantities, with any active promotion and the order's fulfillment type (pickup vs. delivery) already factored in. Call this right before quoting a total to the customer, and relay these figures exactly as returned — never calculate, sum, estimate, or invent a subtotal, tax, fee, or total yourself.",
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'getCheckoutSummary',
+    description: "Get a complete structured summary of the current order, right before checkout — every item with its quantity and customizations, fulfillment details (pickup or delivery, name, phone/delivery address if delivery, pickup time if given), any valid applied promotion, and the exact subtotal/tax/delivery fee/total. Use this to recite the full order back to the customer for final review before asking them to confirm. Relay everything exactly as returned — never calculate, invent, or guess any item detail, promotion, or price yourself.",
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'placeOrder',
+    description: "Finalize and save the order. This is the only tool that actually places it, and it refuses unless every requirement is met: the customer must have already been shown the full checkout summary (call getCheckoutSummary first), all required order-type details must be set (name; plus phone and delivery address for delivery), and customerConfirmed must be true. Only ever pass customerConfirmed: true after the customer gives a clear, unambiguous affirmative to a direct question like \"Shall I place this order?\" — a vague, hedging, or unclear reply (e.g. \"maybe\", \"I think so\", not really answering, changing the subject) is NOT confirmation; if there's any doubt, ask again instead of calling this. If the call fails, it tells you exactly why (summary not yet shown, which order details are still missing, or not yet confirmed) — resolve that with the customer and try again, never guess or force it through.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        customerConfirmed: { type: 'boolean', description: "Set true only after the customer's explicit, unambiguous affirmative reply confirming they want to place the order." },
+      },
+      required: ['customerConfirmed'],
+    },
   },
 ];
 
@@ -118,9 +155,114 @@ function viewCart() {
   };
 }
 
+function getMissingOrderDetails(state) {
+  const missing = [];
+  if (state.orderType !== 'pickup' && state.orderType !== 'delivery') {
+    missing.push('orderType');
+  } else {
+    if (!state.customer.name) missing.push('customerName');
+    if (state.orderType === 'delivery') {
+      if (!state.customer.phone) missing.push('phone');
+      if (!state.deliveryAddress.address) missing.push('deliveryAddress');
+    }
+  }
+  return missing;
+}
+
+function setOrderDetails(input) {
+  const { orderType, customerName, pickupTime, phone, deliveryAddress, aptUnit, deliveryInstructions } = input || {};
+  if (orderType === 'pickup' || orderType === 'delivery') {
+    setOrderType(orderType);
+  }
+  if (customerName !== undefined || phone !== undefined) {
+    setCustomerDetails({ name: customerName, phone });
+  }
+  if (pickupTime !== undefined) {
+    setPickupTime(pickupTime);
+  }
+  if (deliveryAddress !== undefined || aptUnit !== undefined || deliveryInstructions !== undefined) {
+    setDeliveryAddress({ address: deliveryAddress, aptUnit, instructions: deliveryInstructions });
+  }
+  const state = getOrderState();
+  const missing = getMissingOrderDetails(state);
+  return {
+    orderType: state.orderType,
+    customerName: state.customer.name,
+    pickupTime: state.pickupTime,
+    phone: state.customer.phone,
+    deliveryAddress: state.deliveryAddress.address,
+    aptUnit: state.deliveryAddress.aptUnit,
+    deliveryInstructions: state.deliveryAddress.instructions,
+    missing,
+  };
+}
+
 function applyPromotion() {
   const { appliedPromotions, discountTotal, recommendedPromotions } = getOrderTotals();
   return { appliedPromotions, discountTotal, recommendedPromotions };
+}
+
+function getOrderTotal() {
+  const { subtotal, appliedPromotions, discountTotal, tax, deliveryFee, total } = getOrderTotals();
+  return { subtotal, appliedPromotions, discountTotal, tax, deliveryFee, total };
+}
+
+function getCheckoutSummary() {
+  const { items, subtotal, appliedPromotions, discountTotal, tax, deliveryFee, total } = getOrderTotals();
+  const state = getOrderState();
+  markSummaryShown();
+  return {
+    items: items.map(({ lineId, itemId, name, quantity, options, unitPrice, lineTotal }) => ({
+      lineId,
+      itemId,
+      name,
+      quantity,
+      options,
+      unitPrice,
+      lineTotal,
+    })),
+    orderType: state.orderType,
+    customerName: state.customer.name,
+    pickupTime: state.pickupTime,
+    phone: state.customer.phone,
+    deliveryAddress: state.deliveryAddress.address,
+    aptUnit: state.deliveryAddress.aptUnit,
+    deliveryInstructions: state.deliveryAddress.instructions,
+    subtotal,
+    appliedPromotions,
+    discountTotal,
+    tax,
+    deliveryFee,
+    total,
+  };
+}
+
+function placeOrder(input) {
+  const { customerConfirmed } = input || {};
+  const state = getOrderState();
+
+  if (!state.summaryShown) {
+    return { ok: false, reason: 'summary_not_shown' };
+  }
+
+  const missing = getMissingOrderDetails(state);
+  if (missing.length > 0) {
+    return { ok: false, reason: 'missing_order_details', missing };
+  }
+
+  if (customerConfirmed !== true) {
+    return { ok: false, reason: 'not_confirmed' };
+  }
+
+  return confirmOrder({
+    customerName: state.customer.name,
+    phone: state.customer.phone,
+    fulfillmentType: state.orderType,
+    pickupTime: state.pickupTime,
+    deliveryAddress: state.deliveryAddress.address,
+    aptUnit: state.deliveryAddress.aptUnit,
+    deliveryInstructions: state.deliveryAddress.instructions,
+  });
 }
 
 function runTool(name, input) {
@@ -141,6 +283,18 @@ function runTool(name, input) {
   }
   if (name === 'applyPromotion') {
     return applyPromotion();
+  }
+  if (name === 'setOrderDetails') {
+    return setOrderDetails(input);
+  }
+  if (name === 'getOrderTotal') {
+    return getOrderTotal();
+  }
+  if (name === 'getCheckoutSummary') {
+    return getCheckoutSummary();
+  }
+  if (name === 'placeOrder') {
+    return placeOrder(input);
   }
   return { error: `unknown tool: ${name}` };
 }

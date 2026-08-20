@@ -6,7 +6,10 @@ const { getTaxRate, getDeliveryFee } = require('./config');
 
 let currentOrder = [];
 let orderType = null;
-let customer = { name: null };
+let customer = { name: null, phone: null };
+let pickupTime = null;
+let deliveryAddress = { address: null, aptUnit: null, instructions: null };
+let summaryShown = false;
 let confirmed = false;
 let status = 'building';
 
@@ -23,7 +26,7 @@ function getOrderTotals(options) {
   const { appliedPromotions, discountTotal, recommendedPromotions } = evaluatePromotions(items, options);
   const taxableAmount = roundToCents(subtotal - discountTotal);
   const tax = roundToCents(taxableAmount * getTaxRate());
-  const deliveryFee = roundToCents(getDeliveryFee());
+  const deliveryFee = orderType === 'delivery' ? roundToCents(getDeliveryFee()) : 0;
   const total = roundToCents(taxableAmount + tax + deliveryFee);
   return { items, subtotal, appliedPromotions, discountTotal, tax, deliveryFee, total, recommendedPromotions };
 }
@@ -31,7 +34,10 @@ function getOrderTotals(options) {
 function resetOrder() {
   currentOrder = [];
   orderType = null;
-  customer = { name: null };
+  customer = { name: null, phone: null };
+  pickupTime = null;
+  deliveryAddress = { address: null, aptUnit: null, instructions: null };
+  summaryShown = false;
   confirmed = false;
   status = 'building';
 }
@@ -44,9 +50,37 @@ function setOrderType(type) {
   return { ok: true, orderType };
 }
 
-function setCustomerDetails({ name } = {}) {
-  customer = { name: name?.trim() || null };
+function setCustomerDetails({ name, phone } = {}) {
+  if (name !== undefined) {
+    customer.name = name?.trim() || null;
+  }
+  if (phone !== undefined) {
+    customer.phone = phone?.trim() || null;
+  }
   return { ok: true, customer };
+}
+
+function setPickupTime(value) {
+  pickupTime = typeof value === 'string' ? (value.trim() || null) : null;
+  return { ok: true, pickupTime };
+}
+
+function setDeliveryAddress({ address, aptUnit, instructions } = {}) {
+  if (address !== undefined) {
+    deliveryAddress.address = address?.trim() || null;
+  }
+  if (aptUnit !== undefined) {
+    deliveryAddress.aptUnit = aptUnit?.trim() || null;
+  }
+  if (instructions !== undefined) {
+    deliveryAddress.instructions = instructions?.trim() || null;
+  }
+  return { ok: true, deliveryAddress };
+}
+
+function markSummaryShown() {
+  summaryShown = true;
+  return { ok: true, summaryShown };
 }
 
 function setConfirmed(value) {
@@ -64,7 +98,7 @@ function setStatus(newStatus) {
 
 function getOrderState() {
   const { items, discountTotal, total } = getOrderTotals();
-  return { items, orderType, customer, discount: discountTotal, total, confirmed, status };
+  return { items, orderType, customer, pickupTime, deliveryAddress, summaryShown, discount: discountTotal, total, confirmed, status };
 }
 
 function titleCase(value) {
@@ -256,6 +290,9 @@ module.exports = {
   getOrderState,
   setOrderType,
   setCustomerDetails,
+  setPickupTime,
+  setDeliveryAddress,
+  markSummaryShown,
   setConfirmed,
   setStatus,
 };

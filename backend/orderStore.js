@@ -6,7 +6,7 @@ const { getOrderTotals, resetOrder } = require('./order');
 // data/orders.json is temporary, file-based dev storage, not a database — revisit before production.
 const DEFAULT_ORDERS_FILE = path.join(__dirname, '..', 'data', 'orders.json');
 
-const ORDER_STATUSES = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
+const ORDER_STATUSES = ['NEW', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
 const FULFILLMENT_TYPES = ['pickup', 'delivery'];
 
 function getOrdersFilePath() {
@@ -33,7 +33,7 @@ function writeOrders(orders) {
   fs.writeFileSync(filePath, `${JSON.stringify(orders, null, 2)}\n`);
 }
 
-function confirmOrder({ customerName, fulfillmentType } = {}) {
+function confirmOrder({ customerName, fulfillmentType, phone, pickupTime, deliveryAddress, aptUnit, deliveryInstructions } = {}) {
   const { items, subtotal, appliedPromotions, discountTotal, tax, deliveryFee, total } = getOrderTotals();
 
   if (items.length === 0) {
@@ -45,9 +45,14 @@ function confirmOrder({ customerName, fulfillmentType } = {}) {
   const record = {
     orderId: randomUUID(),
     timestamp: new Date().toISOString(),
-    status: 'confirmed',
+    status: 'NEW',
     customerName: customerName?.trim() || null,
+    phone: phone?.trim() || null,
     fulfillmentType: resolvedFulfillmentType,
+    pickupTime: pickupTime?.trim() || null,
+    deliveryAddress: deliveryAddress?.trim() || null,
+    aptUnit: aptUnit?.trim() || null,
+    deliveryInstructions: deliveryInstructions?.trim() || null,
     items,
     subtotal,
     appliedPromotions,

@@ -1,4 +1,4 @@
-const ORDER_STATUSES = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
+const ORDER_STATUSES = ['NEW', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
 
 const ordersArea = document.getElementById('ordersArea');
 const emptyState = document.getElementById('emptyState');
