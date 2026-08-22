@@ -7,7 +7,7 @@ A chatbot-style ordering assistant for a cafe. The backend is a working Express 
 - Backend (`backend/server.js`): implemented — serves the frontend, exposes the orders API, and persists orders to `data/orders.json`.
 - Customer chat UI (`frontend/index.html`, `frontend/chat-widget.js`): live — calls the real `/api/chat` endpoint. (`frontend/app.js` is an older, unused mock and is not loaded by `index.html`.)
 - Staff dashboard (`frontend/staff.html`, `frontend/staff.js`): live — calls the real `/api/orders` and `/api/orders/:id/status` endpoints.
-- `/api/chat`: live — calls the real Anthropic Messages API with a full tool-calling loop (menu lookup, cart management, order details, promotions, deterministic totals, checkout summary, and a confirmation-gated `placeOrder`). Requires a real `ANTHROPIC_API_KEY` in `.env` to return real replies instead of a fallback error.
+- `/api/chat`: live — calls the real Google Gemini API with a full tool-calling loop (menu lookup, cart management, order details, promotions, deterministic totals, checkout summary, and a confirmation-gated `placeOrder`). Requires a real `GEMINI_API_KEY` in `.env` to return real replies instead of a fallback error.
 
 ## Folder layout
 
@@ -38,8 +38,8 @@ Copy `.env.example` to `.env` in the project root and adjust as needed:
 | `TAX_RATE` | No (default `0`) | Sales tax rate as a decimal fraction, e.g. `0.08` |
 | `DELIVERY_FEE` | No (default `0`) | Flat delivery fee added to delivery orders, in dollars |
 | `ORDERS_FILE_PATH` | No (default `data/orders.json`) | Overrides where order records are read/written — useful on platforms with an ephemeral filesystem |
-| `ANTHROPIC_API_KEY` | **Yes** | Real key for the Anthropic (Claude) API — `/api/chat` returns a generic fallback reply without it |
-| `CLAUDE_MODEL` | No (default `claude-sonnet-5`) | Claude model id used for chat responses |
+| `GEMINI_API_KEY` | **Yes** | Real key for the Google Gemini API — `/api/chat` returns a generic fallback reply without it |
+| `GEMINI_MODEL` | No (default `gemini-2.5-flash`) | Gemini model id used for chat responses |
 
 ## Tests
 

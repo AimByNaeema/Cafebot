@@ -4,11 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
 const cors = require('cors');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenAI } = require('@google/genai');
 const { readOrders, updateOrderStatus, confirmOrder, ORDER_STATUSES } = require('./orderStore');
 const { getCurrentOrder, addItemToOrder, modifyOrderItem, removeOrderItem, getOrderTotals, setOrderType, setCustomerDetails, setPickupTime, setDeliveryAddress, markSummaryShown, markAddressConfirmed, getOrderState } = require('./order');
 const { getRecommendations } = require('./recommendations');
-const { getClaudeModel } = require('./config');
+const { getGeminiModel } = require('./config');
 const menu = require('../data/menu.json');
 
 const SYSTEM_PROMPT_RAW = fs.readFileSync(
@@ -20,18 +20,18 @@ const SYSTEM_PROMPT = `${SYSTEM_PROMPT_RAW.slice(
   SYSTEM_PROMPT_RAW.lastIndexOf('```')
 ).trim()}\n\nCURRENT MENU DATA (source of truth, from data/menu.json — only mention items, sizes, and prices listed here; never invent items, sizes, or prices not present in this data):\n${JSON.stringify(menu, null, 2)}`;
 
-const anthropic = new Anthropic();
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const TOOLS = [
   {
     name: 'getMenu',
     description: "Get CafeBot's current menu. Returns only items that are currently available.",
-    input_schema: { type: 'object', properties: {} },
+    parametersJsonSchema: { type: 'object', properties: {} },
   },
   {
     name: 'addItemToCart',
     description: "Add a menu item to the customer's order. itemId must be a real id from the menu data. Only pass options you've already confirmed with the customer — never guess a size, milk, or other option to make the call succeed. If the call fails with missing or invalid options, it will tell you exactly which options are needed and their valid choices — ask the customer for those and call again once you have real answers, don't retry with an invented value. On success, the response may include a `recommendations` field (0-2 real menu items). If present and you haven't already suggested one this order, you may offer it once — never invent a suggestion of your own, and never repeat or re-offer one that's already been declined.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: {
         itemId: { type: 'string', description: 'The id of the menu item from the menu data.' },
@@ -47,7 +47,7 @@ const TOOLS = [
   {
     name: 'modifyItem',
     description: "Change the quantity, size, or other options of an item already in the customer's order. lineId must be the lineId returned by a previous addItemToCart call for that exact line — never guess it; ask the customer which item if unsure. Only include the fields you're changing (quantity, options) — anything omitted keeps its current value. Only pass confirmed option values, never guess. If the call fails with missing or invalid options, ask the customer for exactly what's listed and call again — don't retry with an invented value. This tool does not remove items, and does not place the order.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: {
         lineId: { type: 'string', description: 'The lineId of the existing order line to modify, from a previous addItemToCart result.' },
@@ -63,7 +63,7 @@ const TOOLS = [
   {
     name: 'removeItem',
     description: "Remove an item from the customer's order, or reduce its quantity. lineId must be the lineId of an existing order line (from a previous addItemToCart result) — never guess it; ask the customer which item if unsure. If quantity is omitted, the entire line is removed. If quantity is given, that many units are removed from the line (it's an amount to take away, not a new total) — if it's greater than or equal to the line's current quantity, the whole line is removed. Only call this after the customer has confirmed exactly what to remove.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: {
         lineId: { type: 'string', description: 'The lineId of the existing order line to remove from, from a previous addItemToCart result.' },
@@ -78,12 +78,12 @@ const TOOLS = [
   {
     name: 'viewCart',
     description: "Get a concise, itemized view of what's currently in the customer's order — each line's item, quantity, and confirmed options (size, milk, etc.), including its lineId for use with modifyItem or removeItem. Does not include prices or totals — don't use this to quote a price or total, only to review or confirm what's in the cart. The response may include a `recommendations` field (0-2 real menu items). If present and you haven't already suggested one this order, you may offer it once — never invent a suggestion of your own, and never repeat or re-offer one that's already been declined.",
-    input_schema: { type: 'object', properties: {} },
+    parametersJsonSchema: { type: 'object', properties: {} },
   },
   {
     name: 'setOrderDetails',
     description: "Record the customer's order type (pickup or delivery) along with whatever details that type requires — call this as you collect each piece, passing only what you just confirmed (anything omitted keeps its current value; call it multiple times as info comes in). Pickup only needs a confirmed name (pickup time is optional). Delivery needs a confirmed name, phone number, and full delivery address; apartment/unit and delivery instructions are optional — ask for them, but don't invent a value or leave a required field blank. For delivery orders, calling this with any address field (deliveryAddress, aptUnit, or deliveryInstructions) clears any prior address confirmation — you must call `confirmDeliveryAddress` again afterward. The response's `missing` field lists exactly which required fields are still unset for the order type currently selected, including `addressConfirmed` for delivery orders until it's been confirmed — only ask the customer for those, never re-ask for something already confirmed, and never guess or invent any of these details yourself.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: {
         orderType: { type: 'string', enum: ['pickup', 'delivery'], description: 'Set once the customer has confirmed whether this is pickup or delivery.' },
@@ -99,27 +99,27 @@ const TOOLS = [
   {
     name: 'confirmDeliveryAddress',
     description: "Mark the current delivery address as confirmed by the customer. Only call this after reading the full captured address back to them verbatim — street address, apartment/unit if given, and delivery instructions if given — and receiving their explicit confirmation that it's correct. Delivery orders cannot be placed until this has been called. If the customer corrects any part of the address afterward via setOrderDetails, the confirmation is cleared automatically — read the corrected address back and call this again.",
-    input_schema: { type: 'object', properties: {} },
+    parametersJsonSchema: { type: 'object', properties: {} },
   },
   {
     name: 'applyPromotion',
     description: "Check which active promotions (from data/promotions.json) currently qualify for the customer's order, based on real eligibility rules evaluated against the current cart and time — never based on anything the customer claims. Returns `appliedPromotions` (already reflected in the order's discount — relay the exact discountAmount for each, never estimate or invent it yourself) and `recommendedPromotions` (an eligible offer you may mention once — never repeat or re-offer one that's already been declined). There is no discount-code system: this tool takes no input, and if a customer mentions a promo code, tell them none is needed or recognized — never invent or accept one.",
-    input_schema: { type: 'object', properties: {} },
+    parametersJsonSchema: { type: 'object', properties: {} },
   },
   {
     name: 'getOrderTotal',
     description: "Get the exact subtotal, applied promotion discount, tax, delivery fee, and total for the current order — computed by the backend from real menu prices and quantities, with any active promotion and the order's fulfillment type (pickup vs. delivery) already factored in. Call this right before quoting a total to the customer, and relay these figures exactly as returned — never calculate, sum, estimate, or invent a subtotal, tax, fee, or total yourself.",
-    input_schema: { type: 'object', properties: {} },
+    parametersJsonSchema: { type: 'object', properties: {} },
   },
   {
     name: 'getCheckoutSummary',
     description: "Get a complete structured summary of the current order, right before checkout — every item with its quantity and customizations, fulfillment details (pickup or delivery, name, phone/delivery address if delivery, pickup time if given), any valid applied promotion, and the exact subtotal/tax/delivery fee/total. Use this to recite the full order back to the customer for final review before asking them to confirm. Relay everything exactly as returned — never calculate, invent, or guess any item detail, promotion, or price yourself.",
-    input_schema: { type: 'object', properties: {} },
+    parametersJsonSchema: { type: 'object', properties: {} },
   },
   {
     name: 'placeOrder',
     description: "Finalize and save the order. This is the only tool that actually places it, and it refuses unless every requirement is met: the customer must have already been shown the full checkout summary (call getCheckoutSummary first), all required order-type details must be set (name; plus phone, delivery address, and a confirmed address via confirmDeliveryAddress for delivery), and customerConfirmed must be true. Only ever pass customerConfirmed: true after the customer gives a clear, unambiguous affirmative to a direct question like \"Shall I place this order?\" — a vague, hedging, or unclear reply (e.g. \"maybe\", \"I think so\", not really answering, changing the subject) is NOT confirmation; if there's any doubt, ask again instead of calling this. If the call fails, it tells you exactly why (summary not yet shown, which order details are still missing — including an unconfirmed delivery address, or not yet confirmed) — resolve that with the customer and try again, never guess or force it through.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: {
         customerConfirmed: { type: 'boolean', description: "Set true only after the customer's explicit, unambiguous affirmative reply confirming they want to place the order." },
@@ -314,13 +314,15 @@ function runTool(name, input) {
   return { error: `unknown tool: ${name}` };
 }
 
-function callClaude(messages) {
-  return anthropic.messages.create({
-    model: getClaudeModel(),
-    max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    tools: TOOLS,
-    messages,
+function callGemini(contents) {
+  return ai.models.generateContent({
+    model: getGeminiModel(),
+    contents,
+    config: {
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      tools: [{ functionDeclarations: TOOLS }],
+      maxOutputTokens: 1024,
+    },
   });
 }
 
@@ -359,37 +361,37 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'conversationHistory must be an array' });
   }
 
-  const messages = [
-    ...(conversationHistory || []),
-    { role: 'user', content: message },
+  const contents = [
+    ...(conversationHistory || []).map((entry) => ({
+      role: entry.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: entry.content }],
+    })),
+    { role: 'user', parts: [{ text: message }] },
   ];
 
   try {
-    let response = await callClaude(messages);
+    let response = await callGemini(contents);
     let iterations = 0;
 
-    while (response.stop_reason === 'tool_use' && iterations < 5) {
-      messages.push({ role: 'assistant', content: response.content });
-      const toolResults = response.content
-        .filter((block) => block.type === 'tool_use')
-        .map((block) => ({
-          type: 'tool_result',
-          tool_use_id: block.id,
-          content: JSON.stringify(runTool(block.name, block.input)),
-        }));
-      messages.push({ role: 'user', content: toolResults });
-      response = await callClaude(messages);
+    while (response.functionCalls && response.functionCalls.length > 0 && iterations < 5) {
+      contents.push(response.candidates[0].content);
+      const functionResponseParts = response.functionCalls.map((call) => ({
+        functionResponse: {
+          id: call.id,
+          name: call.name,
+          response: { output: runTool(call.name, call.args) },
+        },
+      }));
+      contents.push({ role: 'user', parts: functionResponseParts });
+      response = await callGemini(contents);
       iterations += 1;
     }
 
-    const reply = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+    const reply = response.text || '';
 
     res.json({ reply });
   } catch (err) {
-    console.error('Claude API error:', err.message);
+    console.error('Gemini API error:', err.message);
     res.status(502).json({
       reply: "Sorry, I'm having trouble connecting right now — please try again in a moment.",
     });
